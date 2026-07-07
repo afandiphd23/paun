@@ -14,6 +14,22 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    fetch('/data.json')
+      .then(res => {
+        if (!res.ok) throw new Error('No bundled data');
+        return res.json();
+      })
+      .then(jsonData => {
+        if (jsonData && jsonData.length > 0) {
+          setData(jsonData);
+        }
+      })
+      .catch(err => {
+        console.log('No initial data bundled or error fetching:', err);
+      });
+  }, []);
+
   // Derive stats and chart data
   const { stats, chartData } = useMemo(() => {
     if (!data) return { stats: null, chartData: null };
