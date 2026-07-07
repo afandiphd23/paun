@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Printer, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function DataTable({ data }) {
   const [inputValue, setInputValue] = useState('');
@@ -63,6 +65,40 @@ export default function DataTable({ data }) {
     return `RM ${parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.text('Compound Records', 14, 15);
+    
+    const tableColumn = ["Date", "Reference No", "Company", "Offense Section", "Amount (RM)", "Paid (RM)"];
+    const tableRows = [];
+
+    filteredAndSortedData.forEach(row => {
+      const rowData = [
+        formatDate(row['TARIKH FORMAT']),
+        row['KOMPAUN REF NO '] || '-',
+        row['SYARIKAT'] || '-',
+        row['SEKSYEN KESALAHAN'] || '-',
+        row['KOMPAUN AMT'] != null ? parseFloat(row['KOMPAUN AMT']).toFixed(2) : '-',
+        row['KOMPAUN BAYAR'] != null ? parseFloat(row['KOMPAUN BAYAR']).toFixed(2) : '-'
+      ];
+      tableRows.push(rowData);
+    });
+
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] }
+    });
+
+    doc.save(`kompaun_records_${new Date().getTime()}.pdf`);
+  };
+
   return (
     <div className="glass-panel" style={{ overflow: 'hidden' }}>
       <div style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
@@ -95,7 +131,7 @@ export default function DataTable({ data }) {
             />
           </div>
           <button 
-            className="button-primary"
+            className="button-primary no-print"
             onClick={() => {
               setSearchTerm(inputValue);
               setCurrentPage(1);
@@ -103,6 +139,24 @@ export default function DataTable({ data }) {
             style={{ padding: '0.75rem 1.25rem' }}
           >
             Search
+          </button>
+          
+          <button 
+            className="button-secondary no-print"
+            onClick={handlePrint}
+            title="Print Dashboard"
+            style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Printer size={20} />
+          </button>
+          
+          <button 
+            className="button-secondary no-print"
+            onClick={handleExportPDF}
+            title="Export Table to PDF"
+            style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Download size={20} />
           </button>
         </div>
       </div>

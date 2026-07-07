@@ -274,3 +274,35 @@ tbody tr:hover {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Print Styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  .no-print, header button, .pagination, .table-container input, .button-primary, .button-secondary {
+    display: none !important;
+  }
+  .glass-panel {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    background: transparent;
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, th, td, p, span {
+    color: black !important;
+  }
+  .text-gradient {
+    background: none;
+    -webkit-text-fill-color: black;
+    color: black;
+  }
+  table {
+    border-collapse: collapse;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+  }
+}
