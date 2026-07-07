@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import FileUploader from './components/FileUploader';
 import StatCard from './components/StatCard';
 import { MonthlyTrendChart, TopCompaniesChart, OffenseSectionChart } from './components/Charts';
+import NetworkGraph from './components/NetworkGraph';
 import DataTable from './components/DataTable';
 import { LayoutDashboard, FileText, DollarSign, Activity, AlertCircle, RefreshCw, Palette } from 'lucide-react';
 
@@ -38,7 +39,7 @@ export default function App() {
     let totalPaid = 0;
     const monthlyCounts = {};
     const companyTotals = {};
-    const offenseTotals = {};
+    const offenses = {};
 
     data.forEach(row => {
       // Amounts
@@ -64,7 +65,7 @@ export default function App() {
       // Offenses
       const offenseMatch = (row['SEKSYEN KESALAHAN'] || '').match(/SEKSYEN\s+[\d\w()]+/i);
       const offense = offenseMatch ? offenseMatch[0] : 'OTHER';
-      offenseTotals[offense] = (offenseTotals[offense] || 0) + 1;
+      offenses[offense] = (offenses[offense] || 0) + 1;
     });
 
     const outstanding = totalAmount - totalPaid;
@@ -80,10 +81,49 @@ export default function App() {
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 10); // Top 10
 
-    const topOffenses = Object.entries(offenseTotals)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5); // Top 5
+    const offenseSectionData = Object.keys(offenses)
+      .map(key => ({ name: key, count: offenses[key] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Build Network Graph Data
+    const companyCountMap = new Map();
+    data.forEach(row => {
+      const company = (row['SYARIKAT'] || 'Unknown').trim();
+      companyCountMap.set(company, (companyCountMap.get(company) || 0) + 1);
+    });
+    
+    const topCompaniesGraph = [...companyCountMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 30)
+      .map(e => e[0]);
+
+    const graphNodes = [];
+    const graphLinks = [];
+    const nodeIds = new Set();
+    const linkSet = new Set();
+
+    data.forEach(row => {
+      const company = (row['SYARIKAT'] || 'Unknown').trim();
+      const offense = (row['SEKSYEN KESALAHAN'] || 'Unknown').trim();
+      
+      if (topCompaniesGraph.includes(company)) {
+        if (!nodeIds.has(company)) {
+          graphNodes.push({ id: company, name: company, group: 2, val: Math.min(companyCountMap.get(company) * 1.5 + 4, 15) });
+          nodeIds.add(company);
+        }
+        if (!nodeIds.has(offense)) {
+          graphNodes.push({ id: offense, name: offense, group: 1, val: 8 });
+          nodeIds.add(offense);
+        }
+        
+        const linkId = `${company}---${offense}`;
+        if (!linkSet.has(linkId)) {
+          graphLinks.push({ source: company, target: offense });
+          linkSet.add(linkId);
+        }
+      }
+    });
 
     return {
       stats: {
@@ -95,7 +135,8 @@ export default function App() {
       chartData: {
         monthly: monthlyData,
         companies: topCompanies,
-        offenses: topOffenses
+        offenseSections: offenseSectionData,
+        graphData: { nodes: graphNodes, links: graphLinks }
       }
     };
   }, [data]);
@@ -196,11 +237,15 @@ export default function App() {
             <TopCompaniesChart data={chartData.companies} />
           </div>
           <div style={{ gridColumn: 'span 5' }}>
-            <OffenseSectionChart data={chartData.offenses} />
+            <OffenseSectionChart data={chartData.offenseSections} />
           </div>
         </div>
 
-        <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <div className="animate-fade-in" style={{ marginBottom: '2rem', animationDelay: '0.2s' }}>
+          <NetworkGraph data={chartData.graphData} />
+        </div>
+
+        <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
           <DataTable data={data} />
         </div>
       </main>
