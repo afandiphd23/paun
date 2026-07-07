@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { LayoutDashboard, FileText, DollarSign, Activity, AlertCircle, RefreshCw, Palette } from 'lucide-react';
 import FileUploader from './components/FileUploader';
 import StatCard from './components/StatCard';
 import { MonthlyTrendChart, TopCompaniesChart, OffenseSectionChart } from './components/Charts';
 import NetworkGraph from './components/NetworkGraph';
 import DataTable from './components/DataTable';
-import { LayoutDashboard, FileText, DollarSign, Activity, AlertCircle, RefreshCw, Palette } from 'lucide-react';
+import AIAssistant from './components/AIAssistant';
 
 export default function App() {
   const [data, setData] = useState(null);
@@ -249,6 +250,9 @@ export default function App() {
           <DataTable data={data} />
         </div>
       </main>
+
+      {/* Floating AI Assistant */}
+      <AIAssistant data={data} />
     </div>
   );
 }
