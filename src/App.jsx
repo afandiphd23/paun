@@ -1,12 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import FileUploader from './components/FileUploader';
 import StatCard from './components/StatCard';
 import { MonthlyTrendChart, TopCompaniesChart, OffenseSectionChart } from './components/Charts';
 import DataTable from './components/DataTable';
-import { LayoutDashboard, FileText, DollarSign, Activity, AlertCircle, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, FileText, DollarSign, Activity, AlertCircle, RefreshCw, Palette } from 'lucide-react';
 
 export default function App() {
   const [data, setData] = useState(null);
+  const [theme, setTheme] = useState('dark');
+  const [showThemes, setShowThemes] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Derive stats and chart data
   const { stats, chartData } = useMemo(() => {
@@ -83,9 +89,25 @@ export default function App() {
   if (!data) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <header style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--bg-glass)', backdropFilter: 'blur(12px)' }}>
-          <LayoutDashboard size={28} color="var(--accent-primary)" />
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Kompaun<span style={{ color: 'var(--accent-primary)' }}>Analytics</span></h1>
+        <header style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-glass)', backdropFilter: 'blur(12px)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <LayoutDashboard size={28} color="var(--accent-primary)" />
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Kompaun<span style={{ color: 'var(--accent-primary)' }}>Analytics</span></h1>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <button className="button-secondary" onClick={() => setShowThemes(!showThemes)} style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Palette size={16} /> Theme
+            </button>
+            {showThemes && (
+              <div className="glass-panel" style={{ position: 'absolute', right: 0, top: '120%', minWidth: '150px', display: 'flex', flexDirection: 'column', padding: '0.5rem', zIndex: 50 }}>
+                {['dark', 'light', 'midnight', 'sunset'].map(t => (
+                  <button key={t} onClick={() => { setTheme(t); setShowThemes(false); }} style={{ padding: '0.5rem', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 'var(--radius-sm)', textTransform: 'capitalize' }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </header>
         <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <FileUploader onDataLoaded={setData} />
@@ -101,9 +123,25 @@ export default function App() {
           <LayoutDashboard size={24} color="var(--accent-primary)" />
           <h1 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Kompaun<span style={{ color: 'var(--accent-primary)' }}>Analytics</span></h1>
         </div>
-        <button className="button-secondary" onClick={() => setData(null)} style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <RefreshCw size={16} /> Load New File
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <button className="button-secondary" onClick={() => setShowThemes(!showThemes)} style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Palette size={16} /> Theme
+            </button>
+            {showThemes && (
+              <div className="glass-panel" style={{ position: 'absolute', right: 0, top: '120%', minWidth: '150px', display: 'flex', flexDirection: 'column', padding: '0.5rem', zIndex: 50 }}>
+                {['dark', 'light', 'midnight', 'sunset'].map(t => (
+                  <button key={t} onClick={() => { setTheme(t); setShowThemes(false); }} style={{ padding: '0.5rem', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 'var(--radius-sm)', textTransform: 'capitalize' }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button className="button-secondary" onClick={() => setData(null)} style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <RefreshCw size={16} /> Load New File
+          </button>
+        </div>
       </header>
 
       <main style={{ padding: '2rem', maxWidth: '1440px', margin: '0 auto' }}>
