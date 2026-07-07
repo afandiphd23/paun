@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 
 export default function DataTable({ data }) {
+  const [inputValue, setInputValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: 'TARIKH FORMAT', direction: 'desc' });
@@ -67,27 +68,42 @@ export default function DataTable({ data }) {
       <div style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
         <h3 style={{ fontSize: '1.125rem' }}>Compound Records</h3>
         
-        <div style={{ position: 'relative', width: '300px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            placeholder="Search company, ref no, or offense..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
+        <div style={{ display: 'flex', gap: '0.5rem', width: '400px' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Search company, ref no, or offense..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setSearchTerm(inputValue);
+                  setCurrentPage(1);
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem 0.75rem 2.5rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                background: 'rgba(15, 23, 42, 0.5)',
+                color: 'var(--text-primary)',
+                outline: 'none',
+                transition: 'var(--transition)'
+              }}
+            />
+          </div>
+          <button 
+            className="button-primary"
+            onClick={() => {
+              setSearchTerm(inputValue);
               setCurrentPage(1);
             }}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem 0.75rem 2.5rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-color)',
-              background: 'rgba(15, 23, 42, 0.5)',
-              color: 'var(--text-primary)',
-              outline: 'none',
-              transition: 'var(--transition)'
-            }}
-          />
+            style={{ padding: '0.75rem 1.25rem' }}
+          >
+            Search
+          </button>
         </div>
       </div>
 
