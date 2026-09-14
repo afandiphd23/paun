@@ -98,42 +98,82 @@ export default function App() {
       .slice(0, 5);
 
     // Build Network Graph Data
-    const companyCountMap = new Map();
+    const sectionPattern = /SEKSYEN\s+[\d\w()]+/i;
+    const companyStats = new Map();
+    const offenseStats = new Map();
+    const linkStats = new Map();
+    const parseAmount = (v) => parseFloat(String(v || '').replace(/[^0-9.-]/g, '')) || 0;
+
     data.forEach(row => {
       const company = (row['SYARIKAT'] || 'Unknown').trim();
-      companyCountMap.set(company, (companyCountMap.get(company) || 0) + 1);
+      const offenseRaw = (row['SEKSYEN KESALAHAN'] || 'Unknown').trim();
+      const sectionMatch = offenseRaw.match(sectionPattern);
+      const offense = sectionMatch ? sectionMatch[0] : 'Other';
+      const amt = parseAmount(row['KOMPAUN AMT']);
+      const paid = parseAmount(row['KOMPAUN BAYAR']);
+
+      let cs = companyStats.get(company);
+      if (!cs) { cs = { count: 0, totalAmount: 0, totalPaid: 0 }; companyStats.set(company, cs); }
+      cs.count += 1;
+      cs.totalAmount += amt;
+      cs.totalPaid += paid;
+
+      let os = offenseStats.get(offense);
+      if (!os) { os = { count: 0, totalAmount: 0, totalPaid: 0, companies: new Set() }; offenseStats.set(offense, os); }
+      os.count += 1;
+      os.totalAmount += amt;
+      os.totalPaid += paid;
+      os.companies.add(company);
+
+      const linkKey = `${company}||${offense}`;
+      let ls = linkStats.get(linkKey);
+      if (!ls) { ls = { count: 0, totalAmount: 0, totalPaid: 0 }; linkStats.set(linkKey, ls); }
+      ls.count += 1;
+      ls.totalAmount += amt;
+      ls.totalPaid += paid;
     });
-    
-    const topCompaniesGraph = [...companyCountMap.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 30)
-      .map(e => e[0]);
 
     const graphNodes = [];
     const graphLinks = [];
-    const nodeIds = new Set();
-    const linkSet = new Set();
 
-    data.forEach(row => {
-      const company = (row['SYARIKAT'] || 'Unknown').trim();
-      const offense = (row['SEKSYEN KESALAHAN'] || 'Unknown').trim();
-      
-      if (topCompaniesGraph.includes(company)) {
-        if (!nodeIds.has(company)) {
-          graphNodes.push({ id: company, name: company, group: 2, val: Math.min(companyCountMap.get(company) * 1.5 + 4, 15) });
-          nodeIds.add(company);
-        }
-        if (!nodeIds.has(offense)) {
-          graphNodes.push({ id: offense, name: offense, group: 1, val: 8 });
-          nodeIds.add(offense);
-        }
-        
-        const linkId = `${company}---${offense}`;
-        if (!linkSet.has(linkId)) {
-          graphLinks.push({ source: company, target: offense });
-          linkSet.add(linkId);
-        }
-      }
+    [...companyStats.entries()]
+      .map(([id, s]) => ({
+        id,
+        name: id,
+        group: 2,
+        count: s.count,
+        totalAmount: s.totalAmount,
+        totalPaid: s.totalPaid,
+        outstanding: Math.max(0, s.totalAmount - s.totalPaid),
+        val: Math.min(4 + Math.log2(s.count + 1) * 2.5, 22)
+      }))
+      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .forEach(n => graphNodes.push(n));
+
+    offenseStats.forEach((s, id) => {
+      graphNodes.push({
+        id,
+        name: id,
+        group: 1,
+        count: s.count,
+        totalAmount: s.totalAmount,
+        totalPaid: s.totalPaid,
+        outstanding: Math.max(0, s.totalAmount - s.totalPaid),
+        companiesAffected: s.companies.size,
+        val: Math.min(6 + Math.log2(s.count + 1) * 2, 20)
+      });
+    });
+
+    linkStats.forEach((ls, linkKey) => {
+      const [source, target] = linkKey.split('||');
+      graphLinks.push({
+        source,
+        target,
+        count: ls.count,
+        totalAmount: ls.totalAmount,
+        totalPaid: ls.totalPaid,
+        outstanding: Math.max(0, ls.totalAmount - ls.totalPaid)
+      });
     });
 
     return {
