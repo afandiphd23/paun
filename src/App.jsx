@@ -97,84 +97,119 @@ export default function App() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // Build Network Graph Data
+    // Build Network Graph Data (factored helper)
     const sectionPattern = /SEKSYEN\s+[\d\w()]+/i;
-    const companyStats = new Map();
-    const offenseStats = new Map();
-    const linkStats = new Map();
     const parseAmount = (v) => parseFloat(String(v || '').replace(/[^0-9.-]/g, '')) || 0;
+    const junkOffense = /JUMLAH|Values|Grand Total|SEKSYEN KESALAHAN/i;
 
-    data.forEach(row => {
-      const company = (row['SYARIKAT'] || 'Unknown').trim();
-      const offenseRaw = (row['SEKSYEN KESALAHAN'] || 'Unknown').trim();
-      const sectionMatch = offenseRaw.match(sectionPattern);
-      const offense = sectionMatch ? sectionMatch[0] : 'Other';
-      const amt = parseAmount(row['KOMPAUN AMT']);
-      const paid = parseAmount(row['KOMPAUN BAYAR']);
+    const buildGraph = (rows) => {
+      const companyStats = new Map();
+      const offenseStats = new Map();
+      const linkStats = new Map();
 
-      let cs = companyStats.get(company);
-      if (!cs) { cs = { count: 0, totalAmount: 0, totalPaid: 0 }; companyStats.set(company, cs); }
-      cs.count += 1;
-      cs.totalAmount += amt;
-      cs.totalPaid += paid;
+      rows.forEach(row => {
+        const company = (row['SYARIKAT'] || '').trim();
+        const offenseRaw = (row['SEKSYEN KESALAHAN'] || '').trim();
+        if (!company || !offenseRaw || junkOffense.test(offenseRaw)) return;
 
-      let os = offenseStats.get(offense);
-      if (!os) { os = { count: 0, totalAmount: 0, totalPaid: 0, companies: new Set() }; offenseStats.set(offense, os); }
-      os.count += 1;
-      os.totalAmount += amt;
-      os.totalPaid += paid;
-      os.companies.add(company);
+        const sectionMatch = offenseRaw.match(sectionPattern);
+        const offense = sectionMatch ? sectionMatch[0] : 'Other';
+        const amt = parseAmount(row['KOMPAUN AMT']);
+        const paid = parseAmount(row['KOMPAUN BAYAR']);
 
-      const linkKey = `${company}||${offense}`;
-      let ls = linkStats.get(linkKey);
-      if (!ls) { ls = { count: 0, totalAmount: 0, totalPaid: 0 }; linkStats.set(linkKey, ls); }
-      ls.count += 1;
-      ls.totalAmount += amt;
-      ls.totalPaid += paid;
-    });
+        let cs = companyStats.get(company);
+        if (!cs) { cs = { count: 0, totalAmount: 0, totalPaid: 0 }; companyStats.set(company, cs); }
+        cs.count += 1;
+        cs.totalAmount += amt;
+        cs.totalPaid += paid;
 
-    const graphNodes = [];
-    const graphLinks = [];
+        let os = offenseStats.get(offense);
+        if (!os) { os = { count: 0, totalAmount: 0, totalPaid: 0, companies: new Set() }; offenseStats.set(offense, os); }
+        os.count += 1;
+        os.totalAmount += amt;
+        os.totalPaid += paid;
+        os.companies.add(company);
 
-    [...companyStats.entries()]
-      .map(([id, s]) => ({
-        id,
-        name: id,
-        group: 2,
-        count: s.count,
-        totalAmount: s.totalAmount,
-        totalPaid: s.totalPaid,
-        outstanding: Math.max(0, s.totalAmount - s.totalPaid),
-        val: Math.min(4 + Math.log2(s.count + 1) * 2.5, 22)
-      }))
-      .sort((a, b) => b.totalAmount - a.totalAmount)
-      .forEach(n => graphNodes.push(n));
-
-    offenseStats.forEach((s, id) => {
-      graphNodes.push({
-        id,
-        name: id,
-        group: 1,
-        count: s.count,
-        totalAmount: s.totalAmount,
-        totalPaid: s.totalPaid,
-        outstanding: Math.max(0, s.totalAmount - s.totalPaid),
-        companiesAffected: s.companies.size,
-        val: Math.min(6 + Math.log2(s.count + 1) * 2, 20)
+        const linkKey = `${company}||${offense}`;
+        let ls = linkStats.get(linkKey);
+        if (!ls) { ls = { count: 0, totalAmount: 0, totalPaid: 0 }; linkStats.set(linkKey, ls); }
+        ls.count += 1;
+        ls.totalAmount += amt;
+        ls.totalPaid += paid;
       });
-    });
 
-    linkStats.forEach((ls, linkKey) => {
-      const [source, target] = linkKey.split('||');
-      graphLinks.push({
-        source,
-        target,
-        count: ls.count,
-        totalAmount: ls.totalAmount,
-        totalPaid: ls.totalPaid,
-        outstanding: Math.max(0, ls.totalAmount - ls.totalPaid)
+      const graphNodes = [];
+      const graphLinks = [];
+
+      [...companyStats.entries()]
+        .map(([id, s]) => ({
+          id,
+          name: id,
+          group: 2,
+          count: s.count,
+          totalAmount: s.totalAmount,
+          totalPaid: s.totalPaid,
+          outstanding: Math.max(0, s.totalAmount - s.totalPaid),
+          val: Math.min(4 + Math.log2(s.count + 1) * 2.5, 22)
+        }))
+        .sort((a, b) => b.totalAmount - a.totalAmount)
+        .forEach(n => graphNodes.push(n));
+
+      offenseStats.forEach((s, id) => {
+        graphNodes.push({
+          id,
+          name: id,
+          group: 1,
+          count: s.count,
+          totalAmount: s.totalAmount,
+          totalPaid: s.totalPaid,
+          outstanding: Math.max(0, s.totalAmount - s.totalPaid),
+          companiesAffected: s.companies.size,
+          val: Math.min(6 + Math.log2(s.count + 1) * 2, 20)
+        });
       });
+
+      linkStats.forEach((ls, linkKey) => {
+        const [source, target] = linkKey.split('||');
+        graphLinks.push({
+          source,
+          target,
+          count: ls.count,
+          totalAmount: ls.totalAmount,
+          totalPaid: ls.totalPaid,
+          outstanding: Math.max(0, ls.totalAmount - ls.totalPaid)
+        });
+      });
+
+      return { nodes: graphNodes, links: graphLinks };
+    };
+
+    const graphAll = buildGraph(data);
+
+    // Year index from valid rows
+    const validRows = data.filter(row => {
+      const company = (row['SYARIKAT'] || '').trim();
+      const offense = (row['SEKSYEN KESALAHAN'] || '').trim();
+      return company && offense && !junkOffense.test(offense);
     });
+    const yearSet = new Set();
+    validRows.forEach(row => {
+      try {
+        const d = new Date(row['TARIKH FORMAT']);
+        if (!isNaN(d)) yearSet.add(d.getFullYear());
+      } catch {}
+    });
+    const years = [...yearSet].sort();
+    const byYear = Object.fromEntries(
+      years.map(y => [
+        y,
+        buildGraph(
+          validRows.filter(row => {
+            try { return new Date(row['TARIKH FORMAT']).getFullYear() === y; } catch { return false; }
+          })
+        )
+      ])
+    );
 
     return {
       stats: {
@@ -187,7 +222,7 @@ export default function App() {
         monthly: monthlyData,
         companies: topCompanies,
         offenseSections: offenseSectionData,
-        graphData: { nodes: graphNodes, links: graphLinks }
+        network: { all: graphAll, byYear, years }
       }
     };
   }, [data]);
@@ -293,7 +328,7 @@ export default function App() {
         </div>
 
         <div className="animate-fade-in" style={{ marginBottom: '2rem', animationDelay: '0.2s' }}>
-          <NetworkGraph data={chartData.graphData} />
+          <NetworkGraph data={chartData.network} />
         </div>
 
         <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
