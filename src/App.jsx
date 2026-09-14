@@ -7,6 +7,16 @@ import NetworkGraph from './components/NetworkGraph';
 import DataTable from './components/DataTable';
 import AIAssistant from './components/AIAssistant';
 
+const normalizeData = (rows) => rows.map(row => {
+  const normalized = {};
+  Object.keys(row).forEach(key => {
+    const trimmedKey = key.trim();
+    const val = row[key];
+    normalized[trimmedKey] = typeof val === 'string' ? val.trim() : val;
+  });
+  return normalized;
+});
+
 export default function App() {
   const [data, setData] = useState(null);
   const [theme, setTheme] = useState('dark');
@@ -24,7 +34,7 @@ export default function App() {
       })
       .then(jsonData => {
         if (jsonData && jsonData.length > 0) {
-          setData(jsonData);
+          setData(normalizeData(jsonData));
         }
       })
       .catch(err => {
@@ -168,7 +178,7 @@ export default function App() {
           </div>
         </header>
         <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <FileUploader onDataLoaded={setData} />
+          <FileUploader onDataLoaded={(d) => setData(normalizeData(d))} />
         </main>
       </div>
     );
